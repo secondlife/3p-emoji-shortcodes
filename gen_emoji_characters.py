@@ -15,6 +15,8 @@ print(ROOT_PATH)
 print(OUTPUT_DIR)
 
 # Constants
+# Note: There is no support for Turkish (TR) characters currently
+#       si SL Viewer short-code support will be limited to English
 ALLOWED_FOLDERS = {'da', 'de', 'en', 'es', 'fr', 'it', 'ja', 'pl', 'pt', 'ru', 'tr', 'zh'}
 
 # Create output directory if it don't exist
@@ -66,6 +68,12 @@ def process_folder(data_file, cldr_file, emojibase_file, messages_file, output_f
         group = next((g['message'] for g in groups if item.get('group') is not None and g['order'] == item['group']), '')
         subgroup = next((sg['message'] for sg in subgroups if item.get('subgroup') is not None and sg['order'] == item['subgroup']), '')
 
+        # The ampersand character is illegal in an XML file outside
+        # of the CDATA section. They appear frequently in the groups/subgroup
+        # tags - "smileys & emotions" for example - so we must replace them
+        group=group.replace(" & ", " and ")
+        subgroup=subgroup.replace(" & ", " and ")
+
         xml_shortcodes = ("".join([f'\t\t\t\t<string>:{code}:</string>\n' for code in short_code]) if isinstance(short_code, list) else f'\t\t\t\t<string>:{short_code}:</string>\n')
 
         map_element = (
@@ -85,8 +93,22 @@ def process_folder(data_file, cldr_file, emojibase_file, messages_file, output_f
         )
         output.append(map_element)
 
-    # Add the XML header and footer
-    xml_header = '<?xml version="1.0" ?>\n<llsd xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="llsd.xsd">\n\t<array>\n'
+    # Header
+    xml_header = '<?xml version="1.0" ?>\n<llsd xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="llsd.xsd">\n'
+    
+    # Warning against editing manually at the top of each file
+    # Ideally, this would be right at the top but it seems like
+    # comments can only appear after the initial <?xml> tag.
+    xml_header += '\t<!--\n' 
+    xml_header += '\tNOTE: changes made to this file locally will be overwritten\n'
+    xml_header += '\twhen CMake is invoked during autobuild.\n' 
+    xml_header += '\tTo modify these files, update the 3p package here:\n'
+    xml_header += '\thttps://github.com/secondlife/3p-emoji-shortcodes\n'
+    xml_header += '\tand add the resulting artifact to autobuild.xml\n'
+    xml_header += '\t-->\n'
+    xml_header += '\t<array>\n'
+    
+    # Footer
     xml_footer = '\t</array>\n</llsd>'
 
     output_str = xml_header + '\n'.join(output) + xml_footer

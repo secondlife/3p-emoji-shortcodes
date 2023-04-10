@@ -3,9 +3,6 @@
 import json
 import sys
 
-#pkg_path = "emojibase/packages/core/package.json"
-#version_path = "version.txt"
-
 pkg_path = sys.argv[1]
 version_path = sys.argv[2]
 build_version = sys.argv[3]
